@@ -26,7 +26,7 @@ DWORD find_pid_by_name(const std::string &name) {
     return process_id;
 }
 
-char *check_addr(const char *pattern, char *begin, SIZE_T size, int *offset) {
+char *check_addr(const char *pattern, char *begin, SIZE_T size) {
     size_t pattern_len = strlen(pattern);
 
     for (int i = 0; i < size; i++) {
@@ -40,7 +40,6 @@ char *check_addr(const char *pattern, char *begin, SIZE_T size, int *offset) {
         }
 
         if (found) {
-            *offset = i;
             return (begin + i);
         }
     }
@@ -57,7 +56,7 @@ std::vector<std::string> find_matches(const char *pattern, HANDLE process_handle
     SYSTEM_INFO si;
     GetSystemInfo(&si);
 
-    char *buffer{nullptr};
+    char *buffer = nullptr;
     std::vector<std::string> potential_strings = {};
     for (char *curr = begin; curr < si.lpMaximumApplicationAddress; curr += mbi.RegionSize) {
         if (!VirtualQueryEx(process_handle, curr, &mbi, sizeof(mbi))) {
@@ -71,17 +70,12 @@ std::vector<std::string> find_matches(const char *pattern, HANDLE process_handle
         delete[] buffer;
         buffer = new char[mbi.RegionSize];
 
-        DWORD old_protect;
-        if (VirtualProtectEx(process_handle, mbi.BaseAddress, mbi.RegionSize, PAGE_EXECUTE_READWRITE, &old_protect)) {
-            SIZE_T bytes_read;
-            ReadProcessMemory(process_handle, mbi.BaseAddress, buffer, mbi.RegionSize, &bytes_read);
-            VirtualProtectEx(process_handle, mbi.BaseAddress, mbi.RegionSize, old_protect, &old_protect);
+        SIZE_T bytes_read;
+        ReadProcessMemory(process_handle, mbi.BaseAddress, buffer, mbi.RegionSize, &bytes_read);
 
-            int offset = 0;
-            char *match = check_addr(pattern, buffer, bytes_read, &offset);
-            if (match != nullptr) {
-                potential_strings.emplace_back(match);
-            }
+        char *match = check_addr(pattern, buffer, bytes_read);
+        if (match != nullptr) {
+            potential_strings.emplace_back(match);
         }
     }
 
