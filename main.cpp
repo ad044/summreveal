@@ -84,6 +84,13 @@ std::vector<std::string> find_matches(const char *pattern, HANDLE process_handle
 }
 
 int main() {
+    // Summoner names with non-ASCII characters were rendered incorrectly
+    // https://stackoverflow.com/q/45575863
+    // Set console code page to UTF-8 so console known how to interpret string data
+    SetConsoleOutputCP(CP_UTF8);
+    // Enable buffering to prevent VS from chopping up UTF-8 byte sequences
+    setvbuf(stdout, nullptr, _IOFBF, 1000);
+
     std::string PROCESS_NAME = "LeagueClient.exe";
 
     DWORD pid = find_pid_by_name(PROCESS_NAME);
